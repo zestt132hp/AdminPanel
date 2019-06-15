@@ -1,0 +1,31 @@
+  <div class="col-lg-12">
+    <div>
+      Page Size:
+      <select (change)="onPageSizeChanged()" id="page-size">
+        <option value="10" selected="">10</option>
+        <option value="100">100</option>
+        <option value="500">500</option>
+        <option value="1000">1000</option>
+      </select>
+      <ag-grid-angular #agGrid
+                       id="myGrid"
+                       style="height: 768px; max-width: 1968px; display: block;"
+                       class="ag-theme-balham"
+                       [columnDefs]="columnDefs"
+                       [autoGroupColumnDef]="autoGroupColumnDef"
+                       [defaultColDef]="defaultColDef"
+                       [suppressRowClickSelection]="true"
+                       [groupSelectsChildren]="true"
+                       [debug]="true"
+                       [rowSelection]="rowSelection"
+                       [rowGroupPanelShow]="rowGroupPanelShow"
+                       [pivotPanelShow]="pivotPanelShow"
+                       [enableRangeSelection]="true"
+                       [pagination]="true"
+                       [paginationPageSize]="paginationPageSize"
+                       [paginationNumberFormatter]="paginationNumberFormatter"
+                       [rowData]="rowData"
+                       >
+      </ag-grid-angular>
+  </div>
+  </div>

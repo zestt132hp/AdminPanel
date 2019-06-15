@@ -1,0 +1,7 @@
+  <select required name="Users" class="custom-select form-control custom-select-lg mb-3" [(ngModel)]="selectedUsers">
+    <option value="undefined">Please select Value </option>
+    <option *ngFor="let user of users"
+      [ngValue] = "user.id" >
+      {{ user.name }}
+    </option>
+  </select>

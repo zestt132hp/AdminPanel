@@ -3,32 +3,29 @@ import { NgModule } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpClientModule } from '@angular/common/http';
 import { RouterModule } from '@angular/router';
-
 import { AppComponent } from './app.component';
-import { NavMenuComponent } from './nav-menu/nav-menu.component';
-import { HomeComponent } from './home/home.component';
-import { CounterComponent } from './counter/counter.component';
-import { FetchDataComponent } from './fetch-data/fetch-data.component';
+import { AgGridModule } from 'ag-grid-angular';
+import { GridComponent } from "./GridComponent.component";
+import * as Announceservice from "./services/announce.service";
+import AnnService = Announceservice.AnnService;
+import Userservice = require("./services/user.service");
+import UserService = Userservice.UserService;
+import { UserComponent } from './users/userComponent';
 
 @NgModule({
   declarations: [
     AppComponent,
-    NavMenuComponent,
-    HomeComponent,
-    CounterComponent,
-    FetchDataComponent
+    GridComponent,
+    UserComponent
   ],
   imports: [
     BrowserModule.withServerTransition({ appId: 'ng-cli-universal' }),
     HttpClientModule,
     FormsModule,
-    RouterModule.forRoot([
-      { path: '', component: HomeComponent, pathMatch: 'full' },
-      { path: 'counter', component: CounterComponent },
-      { path: 'fetch-data', component: FetchDataComponent },
-    ])
+    RouterModule.forRoot([{ path: '', component: AppComponent }]),
+    AgGridModule.withComponents([])
   ],
-  providers: [],
+  providers: [AnnService, UserService],
   bootstrap: [AppComponent]
 })
 export class AppModule { }
