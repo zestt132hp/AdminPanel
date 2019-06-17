@@ -1,0 +1,3 @@
+"bootstrap": "^3.4.1",
+
+    "@ng-bootstrap/ng-bootstrap": "^4.2.1",

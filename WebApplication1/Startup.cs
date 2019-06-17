@@ -1,11 +1,10 @@
-using AdministratorPanelMvc.Data;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SpaServices.AngularCli;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using WebApplication1.Data;
 
 namespace WebApplication1
 {
@@ -18,21 +17,28 @@ namespace WebApplication1
 
         public IConfiguration Configuration { get; }
 
-        // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddEntityFrameworkNpgsql().AddDbContext<AdministratorContext>()
                 .BuildServiceProvider();
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
-            //services.AddDbContext<AdministratorContext>(options => options.UseNpgsql("Host=localhost;port=5432;Database=Database;Username=postgres;Password=qwe123"));
-            // In production, the Angular files will be served from this directory
             services.AddSpaStaticFiles(configuration =>
             {
                 configuration.RootPath = "ClientApp/dist";
             });
+            services.AddSwaggerDocument(config=> config.PostProcess= document =>
+            {
+                document.Info.Version = "V1.0.0";
+                document.Info.Title = "Administration webApi";
+                document.Info.Contact = new NSwag.OpenApiContact()
+                {
+                    Name = "Nikolay Anikeev",
+                    Email = "http://n.anikeev19@gmail.com",
+                    Url = "https://vk.com/zest_45"
+                };
+            });
         }
 
-        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IHostingEnvironment env)
         {
             if (env.IsDevelopment())
@@ -44,6 +50,9 @@ namespace WebApplication1
                 app.UseExceptionHandler("/Error");
                 app.UseHsts();
             }
+
+            app.UseOpenApi();
+            app.UseSwaggerUi3();
 
             app.UseHttpsRedirection();
             app.UseStaticFiles();

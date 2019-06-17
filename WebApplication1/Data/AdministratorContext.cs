@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using WebApplication1.Models;
 
-namespace AdministratorPanelMvc.Data
+namespace WebApplication1.Data
 {
     public class AdministratorContext : DbContext
     {
@@ -10,7 +11,7 @@ namespace AdministratorPanelMvc.Data
         }
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
             => optionsBuilder.UseNpgsql("Host=localhost;port=5432;Database=Database;Username=postgres;Password=qwe123");
-        public DbSet<AdministratorPanelMvc.Models.Announcement> Announcement { get; set; }
-        public DbSet<AdministratorPanelMvc.Models.User> Users { get; set; }
+        public DbSet<Announcement> Announcement { get; set; }
+        public DbSet<User> Users { get; set; }
     }
 }
