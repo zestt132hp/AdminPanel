@@ -5,6 +5,7 @@ namespace WebApplication1.Models
 {
     public class Announcement
     {
+        [Required]
         [RegularExpression(@"(?im)^[{(]?[0-9A-F]{8}[-]?(?:[0-9A-F]{4}[-]?){3}[0-9A-F]{12}[)}]?$")]
         public Guid AnnouncementId { get; set; }
         [Required]

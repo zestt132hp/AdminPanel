@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using WebApplication1.Data;
 using WebApplication1.Models;
 
@@ -13,11 +14,16 @@ namespace WebApplication1.Controllers
     [ApiController]
     public class AnnouncementsController : ControllerBase
     {
-        private readonly AdministratorContext _context;
+        private readonly IRepository<Announcement> _repositoryAnnouncement;
+        private readonly IRepository<User> _repositoryUser;
+        private readonly int _maxCountAnnouncement;
 
-        public AnnouncementsController(AdministratorContext context)
+        public AnnouncementsController(IConfiguration config)
         {
-            _context = context;
+            _repositoryAnnouncement = new AnnouncementRepos(config);
+            _repositoryUser= new UserRepos(config);
+            Int32.TryParse(config["MaxCountAnnouncement"], out var z);
+            _maxCountAnnouncement = z;
         }
         /// <summary>
         /// Возвращает все объекты из базы данных
@@ -26,69 +32,80 @@ namespace WebApplication1.Controllers
         // GET: api/Announcements
         [HttpGet]
         [ProducesResponseType(200)]
-        public IEnumerable<Announcement> GetAnnouncement()
+        public async Task<IEnumerable<AnnouncementDto>> GetAnnouncement()
         {
-            return _context?.Announcement?.Include(u=> u.User).ToList(); 
+            var result = await _repositoryAnnouncement.GetList();
+            return result.Select(x => new AnnouncementDto() {Number = x.Number, UserName = x.User.Name, Text = x.Text});
         }
+
         /// <summary>
         /// Возвращает объект 
         /// </summary>
-        /// <param name="id">уникальный guid объекта</param>
+        /// <param name="number">номер объявления</param>
         /// <returns></returns>
         // GET: api/Announcements/5
-        [HttpGet("{id}")]
+        [HttpGet("{number}")]
         [ProducesResponseType(200)]
-        [ProducesResponseType(404)]
-        public async Task<IActionResult> GetAnnouncement([FromRoute] Guid id)
+        [ProducesResponseType(404)] 
+        public async Task<IActionResult> GetAnnouncement(int number)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
 
-            var announcement = await _context.Announcement.FindAsync(id);
-
-            if (announcement == null)
-            {
-                return NotFound();
-            }
-
-            return Ok(announcement);
+            var announcements = await _repositoryAnnouncement.GetList();
+            var annTmp = from b in announcements
+                where b.Number == number
+                select new AnnouncementDto()
+                {
+                    Number = b.Number,
+                    UserName = b.User.Name,
+                    Text = b.Text
+                };
+            annTmp = annTmp.ToList();
+            if (!annTmp.Any())
+                 return BadRequest();
+            return Ok(annTmp.FirstOrDefault());
         }
+
         /// <summary>
         /// обновление объекта в базе данных
         /// </summary>
-        /// <param name="id">уникальный guid объекта</param>
-        /// <param name="announcement">объект</param>
+        /// <param name="number">номер объявления</param>
+        /// <param name="announcementDto">объект</param>
         /// <returns></returns>
         // PUT: api/Announcements/5
-        [HttpPut("{id}")]
+        [HttpPut("{number}")]
         [ProducesResponseType(200)]
         [ProducesResponseType(404)]
         [ProducesResponseType(400)]
         [ProducesResponseType(204)]
-        public async Task<IActionResult> PutAnnouncement([FromRoute] Guid id, [FromBody] Announcement announcement)
+        public async Task<IActionResult> PutAnnouncement([FromRoute] int number, [FromBody] AnnouncementDto announcementDto)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-            if (id != announcement.AnnouncementId)
+            if (number != announcementDto.Number)
             {
                 return BadRequest();
             }
 
-            _context.Entry(announcement).State = EntityState.Modified;
-
+            var result = await _repositoryAnnouncement.GetList();
+            var list = result.ToList();
             try
             {
-                await _context.SaveChangesAsync();
-                return Ok(announcement);
+                var annTmp = list.FirstOrDefault(x => x.Number == number);
+                if (annTmp == null)
+                    return NotFound();
+                annTmp.Text = announcementDto.Text;
+                annTmp.CreationDateTime = DateTime.Now;
+                annTmp.Rate = 1;
+                await _repositoryAnnouncement.Update(annTmp);
+                _repositoryAnnouncement.Save();
+                return Ok(announcementDto);
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!AnnouncementExists(id))
+                if (list.Any(x=>x.Number == number))
                 {
                     return NotFound();
                 }
@@ -108,50 +125,68 @@ namespace WebApplication1.Controllers
         [HttpPost]
         [ProducesResponseType(200)]
         [ProducesResponseType(400)]
-        public async Task<IActionResult> PostAnnouncement([FromBody] Announcement announcement)
+        public async Task<IActionResult> PostAnnouncement([FromBody] AnnouncementDto announcement)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
+            var result = await _repositoryUser.GetList();
+            var enumerable = result.ToList();
+            if (!(enumerable.Count() < _maxCountAnnouncement))
+            {
+                return CreatedAtAction("GetAnnouncement", new {number = announcement.Number},
+                    "Превышен лимит количества объявлений в ситсеме");
+            }
+            var user = enumerable.FirstOrDefault(x => x.Name == announcement.UserName);
+            if (user == null)
+            {
+                user = new User() {Name = announcement.UserName, UserId = new Guid()};
+                await _repositoryUser.Create(user);
+            }
+            Announcement annTmp = new Announcement()
+            {
+                AnnouncementId = new Guid(), CreationDateTime = DateTime.Now,
+                Number = enumerable.Count() + 1,
+                Rate = 1,
+                Text = announcement.Text,
+                User = user
+            };
+            await _repositoryAnnouncement.Create(annTmp);
+            _repositoryAnnouncement.Save();
 
-            _context.Announcement.Add(announcement);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction("GetAnnouncement", new { id = announcement.AnnouncementId }, announcement);
+            return CreatedAtAction("GetAnnouncement", new { number = announcement.Number }, announcement);
         }
         /// <summary>
         /// Удаляет объявление из базы данных
         /// </summary>
-        /// <param name="id">уникальный guid объявления</param>
+        /// <param name="number">уникальный guid объявления</param>
         /// <returns></returns>
         // DELETE: api/Announcements/5
-        [HttpDelete("{id}")]
+        [HttpDelete("{number}")]
         [ProducesResponseType(200)]
         [ProducesResponseType(404)]
         [ProducesResponseType(400)]
-        public async Task<IActionResult> DeleteAnnouncement([FromRoute] Guid id)
+        public async Task<IActionResult> DeleteAnnouncement([FromRoute] int number)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-            var announcement = await _context.Announcement.FindAsync(id);
+            var result = await _repositoryAnnouncement.GetList();
+            result = result.ToList();
+            var announcement = result.AsParallel().FirstOrDefault(x => x.Number == number);
             if (announcement == null)
             {
                 return NotFound();
             }
 
-            _context.Announcement.Remove(announcement);
-            await _context.SaveChangesAsync();
+            if (!await _repositoryAnnouncement.Delete(announcement.AnnouncementId))
+                return BadRequest();
 
+            _repositoryAnnouncement.Save();
             return Ok(announcement);
-        }
-
-        private bool AnnouncementExists(Guid id)
-        {
-            return _context.Announcement.Any(e => e.AnnouncementId == id);
         }
     }
 }

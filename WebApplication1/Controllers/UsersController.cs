@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using WebApplication1.Data;
 using WebApplication1.Models;
 
@@ -12,11 +13,11 @@ namespace WebApplication1.Controllers
     [ApiController]
     public class UsersController : ControllerBase
     {
-        private readonly AdministratorContext _context;
+        private readonly IRepository<User> _context;
 
-        public UsersController(AdministratorContext context)
+        public UsersController(IConfiguration config)
         {
-            _context = context;
+            _context = new UserRepos(config);
         }
 
         /// <summary>
@@ -26,9 +27,10 @@ namespace WebApplication1.Controllers
         // GET: api/Users
         [HttpGet]
         [ProducesResponseType(200)]
-        public JsonResult GetUser()
+        public async Task<JsonResult> GetUser()
         {
-            return new JsonResult(_context.Users.ToList());
+            var result = await _context.GetList();
+            return new JsonResult(result.AsParallel().Select(x=> new UserDto(){FirstName = x.Name}));
         }
         /// <summary>
         /// Возвращает объект по Id
@@ -47,7 +49,8 @@ namespace WebApplication1.Controllers
                 return BadRequest(ModelState);
             }
 
-            var users = await _context.Users.FindAsync(id);
+            var result = await _context.GetList();
+            var users = result.FirstOrDefault(x=>x.UserId == id);
 
             if (users == null)
             {
@@ -59,7 +62,6 @@ namespace WebApplication1.Controllers
         /// <summary>
         /// Обновление объекта в базе данных
         /// </summary>
-        /// <param name="id">уникальный идентификатор объекта</param>
         /// <param name="users">объект</param>
         /// <returns></returns>
         // PUT: api/Users/5
@@ -68,35 +70,26 @@ namespace WebApplication1.Controllers
         [ProducesResponseType(404)]
         [ProducesResponseType(400)]
         [ProducesResponseType(204)]
-        public async Task<IActionResult> PutUsers([FromRoute] Guid id, [FromBody] User users)
+        public async Task<IActionResult> PutUsers([FromBody] UserDto users)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-            if (id != users.UserId)
-            {
-                return BadRequest();
-            }
-
-            _context.Entry(users).State = EntityState.Modified;
-
+            var list = await _context.GetList();
+            var userTmp = list.AsParallel().FirstOrDefault(x => x.Name == users.FirstName);
+            if (userTmp == null)
+                return NotFound();
             try
             {
-                await _context.SaveChangesAsync();
+                await _context.Update(userTmp);
+                _context.Save();
                 return Ok(users);
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!UsersExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    return NoContent();
-                }
+                return NotFound();
             }
         }
         /// <summary>
@@ -108,17 +101,18 @@ namespace WebApplication1.Controllers
         [HttpPost]
         [ProducesResponseType(200)]
         [ProducesResponseType(400)]
-        public async Task<IActionResult> PostUsers([FromBody] User user)
+        public async Task<IActionResult> PostUsers([FromBody] UserDto user)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
+            User userTmp = new User(){Name = user.FirstName, UserId = new Guid()};
+            await _context.Create(userTmp);
+            _context.Save();
 
-            return CreatedAtAction("GetUsers", new { id = user.UserId }, user);
+            return CreatedAtAction("GetUsers", new { name = user.FirstName }, user);
         }
         /// <summary>
         /// Проводит удаление объекта из базы данных
@@ -137,21 +131,15 @@ namespace WebApplication1.Controllers
                 return BadRequest(ModelState);
             }
 
-            var users = await _context.Users.FindAsync(id);
+            var users = await _context.Get(id);
             if (users == null)
             {
                 return NotFound();
             }
-
-            _context.Users.Remove(users);
-            await _context.SaveChangesAsync();
+            await _context.Delete(users.UserId);
+            _context.Save();
 
             return Ok(users);
-        }
-
-        private bool UsersExists(Guid id)
-        {
-            return _context.Users.Any(e => e.UserId == id);
         }
     }
 }

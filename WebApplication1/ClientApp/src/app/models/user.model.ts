@@ -1,10 +1,10 @@
 interface IUsers {
   id: string;
-  name: string;
+  userName: string;
 }
 export class User implements IUsers{
   id: string;
-  name: string;
+  userName: string;
   private url;
   private http;
 }

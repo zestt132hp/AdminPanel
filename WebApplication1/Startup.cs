@@ -22,6 +22,7 @@ namespace WebApplication1
             services.AddEntityFrameworkNpgsql().AddDbContext<AdministratorContext>()
                 .BuildServiceProvider();
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
+            services.AddSingleton(Configuration);
             services.AddSpaStaticFiles(configuration =>
             {
                 configuration.RootPath = "ClientApp/dist";

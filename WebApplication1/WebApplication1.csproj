@@ -39,7 +39,6 @@
 
   <ItemGroup>
     <Folder Include="ClientApp\src\app\modal\content\" />
-    <Folder Include="Models\" />
   </ItemGroup>
 
   <ItemGroup>

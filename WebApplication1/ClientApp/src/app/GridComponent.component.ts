@@ -21,7 +21,7 @@ export class GridComponent implements OnInit {
   private columnDefs = [
     { headerName: 'Номер', field: 'number', sortable: true },
     {
-      headerName: 'Пользователь', field: 'users', cellRenderer:(params)=>params.data.user.name, sortable: true, width: 280 },
+      headerName: 'Пользователь', field: 'users', cellRenderer:(params)=>params.data.userName, sortable: true, width: 280 },
     { headerName: 'Текст', field: 'text', editable: true },
     { headerName: 'Рейтинг', field: 'rate', sortable: true, editable: true },
     { headerName: 'Дата публикации', field: 'creationDateTime', sortable: true }
